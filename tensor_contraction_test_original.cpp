@@ -2,7 +2,6 @@
 #include <sys/time.h>
 #include <omp.h>
 #include <cassert>
-#include <cmath>
 
 inline double get_clock_us()
 {
@@ -31,41 +30,7 @@ void tensor_contraction_naive(int S, int L, int M, int I, int J, const float *A,
 
 void tensor_contraction(int S, int L, int M, int I, int J, const float *A, const float *B, float *C)
 {
-    #pragma omp parallel for collapse(2) schedule(static)
-    for (int l = 0; l < L; ++l) {
-        for (int m = 0; m < M; ++m) {
-            // Local accumulator for C[l][m][I][J]
-            // Using double for precision as required
-            double c_local[32][32];
-            
-            // Initialize accumulators
-            for (int i = 0; i < I; ++i) {
-                for (int j = 0; j < J; ++j) {
-                    c_local[i][j] = 0.0;
-                }
-            }
-            
-            for (int s = 0; s < S; ++s) {
-                const float* A_ptr = A + (s * L + l) * I;
-                const float* B_ptr = B + (s * M + m) * J;
-                
-                for (int i = 0; i < I; ++i) {
-                    double a_val = (double)A_ptr[i];
-                    for (int j = 0; j < J; ++j) {
-                        c_local[i][j] += a_val * (double)B_ptr[j];
-                    }
-                }
-            }
-            
-            // Store result
-            float* C_ptr = C + (l * M + m) * I * J;
-            for (int i = 0; i < I; ++i) {
-                for (int j = 0; j < J; ++j) {
-                    C_ptr[i * J + j] = (float)c_local[i][j];
-                }
-            }
-        }
-    }
+    // tensor_contraction implement
 }
 
 void tensor_contraction_test(int S, int L, int M, int I, int J)
@@ -100,7 +65,7 @@ void tensor_contraction_test(int S, int L, int M, int I, int J)
     double max_diff = 0;
     for (int i = 0; i < L * M * I * J; ++i) {
         double diff = (double)C_std[i] - C[i];
-        max_diff = std::max(max_diff, std::abs(diff));
+        max_diff = std::max(max_diff, abs(diff));
     }
 
     double begin_time = get_clock_us();
@@ -120,7 +85,7 @@ void tensor_contraction_test(int S, int L, int M, int I, int J)
     if (max_diff < 1e-9) {
         printf("PASSED");
     } else {
-        printf("FAILED!!! max_diff = %lf\n", max_diff);
+        printf("FAILED!!! max_diff = %llf\n", max_diff);
     }
 }
 

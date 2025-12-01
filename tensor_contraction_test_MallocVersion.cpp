@@ -68,13 +68,31 @@ void tensor_contraction(int S, int L, int M, int I, int J, const float *A, const
     }
 }
 
+#include <malloc.h>
+
+void* my_aligned_alloc(size_t alignment, size_t size) {
+#ifdef _WIN32
+    return _aligned_malloc(size, alignment);
+#else
+    return aligned_alloc(alignment, size);
+#endif
+}
+
+void my_free(void* ptr) {
+#ifdef _WIN32
+    _aligned_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+
 void tensor_contraction_test(int S, int L, int M, int I, int J)
 {
     static constexpr int test_times = 10;
-    float *A = (float *)aligned_alloc(64, S * L * I * test_times * sizeof(float));
-    float *B = (float *)aligned_alloc(64, S * M * J * test_times * sizeof(float));
-    float *C = (float *)aligned_alloc(64, L * M * I * J * test_times * sizeof(float));
-    float *C_std = (float *)aligned_alloc(64, L * M * I * J * sizeof(float));
+    float *A = (float *)my_aligned_alloc(64, S * L * I * test_times * sizeof(float));
+    float *B = (float *)my_aligned_alloc(64, S * M * J * test_times * sizeof(float));
+    float *C = (float *)my_aligned_alloc(64, L * M * I * J * test_times * sizeof(float));
+    float *C_std = (float *)my_aligned_alloc(64, L * M * I * J * sizeof(float));
 
     #pragma omp parallel
     {
@@ -112,10 +130,10 @@ void tensor_contraction_test(int S, int L, int M, int I, int J)
     double avg_time = (end_time - begin_time) / test_times;
     printf("avg_time = %lf ms\n", avg_time / 1e3);
 
-    free(A);
-    free(B);
-    free(C);
-    free(C_std);
+    my_free(A);
+    my_free(B);
+    my_free(C);
+    my_free(C_std);
 
     if (max_diff < 1e-9) {
         printf("PASSED");
